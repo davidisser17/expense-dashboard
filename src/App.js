@@ -334,6 +334,45 @@ const ExpenseDashboard = () => {
     return months[month - 1];
   };
 
+  const getPreviousMonthComparison = (currentKey) => {
+    const currentData = expenses[currentKey];
+
+    if (!currentData) return null;
+
+    let prevMonth = currentData.month - 1;
+    let prevYear = currentData.year;
+
+    // Jika Januari → ambil Desember tahun sebelumnya
+    if (prevMonth === 0) {
+      prevMonth = 12;
+      prevYear -= 1;
+    }
+
+    const prevKey = generateMonthKey(prevMonth, prevYear);
+    const prevData = expenses[prevKey];
+
+    // Jika bulan sebelumnya tidak ada data
+    if (!prevData) return null;
+
+    const currentTotal = calculateTotal(currentKey);
+    const prevTotal = calculateTotal(prevKey);
+
+    const difference = currentTotal - prevTotal;
+
+    const percentage =
+      prevTotal > 0
+        ? ((difference / prevTotal) * 100).toFixed(1)
+        : 0;
+
+    return {
+      difference,
+      percentage,
+      isIncrease: difference > 0,
+      prevMonthName: getMonthName(prevMonth),
+      prevYear
+    };
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
       style: 'currency',
@@ -596,6 +635,7 @@ if (!currentMonthData) {
 }
 
 const total = calculateTotal(selectedMonth);
+const comparison = getPreviousMonthComparison(selectedMonth);
 
 return (
 
@@ -681,10 +721,41 @@ return (
         {showStickyFilter && <div className="h-[88px] mb-8"></div>}
 
         {/* Total Pengeluaran */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-2xl p-8 mb-8 shadow-xl">
+        <div className="bg-gradient-to-r from-blue-500 to-blue-800 rounded-2xl p-8 mb-8 shadow-xl">
           <p className="text-blue-100 text-sm mb-2">Total Pengeluaran Bulan Ini</p>
           <p className="text-5xl font-bold text-white">{formatCurrency(total)}</p>
-          <p className="text-blue-100 text-sm mt-3">{currentMonthData.items.length} transaksi tercatat</p>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <p className="text-blue-100 text-sm">
+              {currentMonthData.items.length} transaksi tercatat
+            </p>
+
+          {comparison && (
+          <div
+            className={`px-3 py-2 rounded-full text-xs font-semibold flex items-center gap-2 ${
+              comparison.isIncrease
+                ? 'bg-red-500/20 text-red-100 border border-red-400/20'
+                : 'bg-green-500/20 text-green-100 border border-green-400/20'
+            }`}
+          >
+            <span>
+              {comparison.isIncrease ? '↑' : '↓'}{' '}
+              {Math.abs(comparison.percentage)}%
+            </span>
+
+            <span>•</span>
+
+            <span>
+              {comparison.isIncrease
+                ? `Bulan ini anda lebih boros ${formatCurrency(Math.abs(comparison.difference))}`
+                : `Bulan ini lebih hemat ${formatCurrency(Math.abs(comparison.difference))}`}
+            </span>
+
+            <span>
+              dibanding {comparison.prevMonthName} {comparison.prevYear}
+            </span>
+          </div>
+        )}
+          </div>
         </div>
 
         {/* Breakdown Kategori */}

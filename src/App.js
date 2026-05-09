@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowLeft, Download, Upload, Trash2, Calendar, DollarSign, Edit2, Check, X, LogOut } from 'lucide-react';
+import { Plus, ArrowLeft, Download, Upload, Trash2, Calendar, DollarSign, Edit2, Check, X, LogOut, Eye, EyeOff } from 'lucide-react';
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, getDocs, deleteDoc } from 'firebase/firestore';
@@ -11,6 +11,7 @@ const ExpenseDashboard = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // App states
   const [view, setView] = useState('list');
@@ -371,21 +372,32 @@ const ExpenseDashboard = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-700 text-white rounded-xl border border-slate-600 focus:border-blue-500 focus:outline-none transition-all"
-                placeholder="admin@expense.app"
+                placeholder="Masukkan Email Anda"
                 required
               />
             </div>
 
             <div>
               <label className="block text-slate-400 mb-2 text-sm">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-700 text-white rounded-xl border border-slate-600 focus:border-blue-500 focus:outline-none transition-all"
-                placeholder="••••••••"
-                required
-              />
+
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-12 bg-slate-700 text-white rounded-xl border border-slate-600 focus:border-blue-500 focus:outline-none transition-all"
+                  placeholder="Masukkan password"
+                  required
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-all"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
 
             {authError && (
@@ -402,11 +414,11 @@ const ExpenseDashboard = () => {
             </button>
           </form>
 
-          <div className="mt-6 p-4 bg-slate-700/50 rounded-xl">
+          {/* <div className="mt-6 p-4 bg-slate-700/50 rounded-xl">
             <p className="text-slate-400 text-xs text-center mb-2">Account Info:</p>
             <p className="text-slate-300 text-sm text-center font-mono">admin@expense.app</p>
             <p className="text-slate-300 text-sm text-center font-mono">admin1705</p>
-          </div>
+          </div> */}
         </div>
       </div>
     );

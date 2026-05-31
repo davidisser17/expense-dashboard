@@ -3,6 +3,7 @@ import { Plus, ArrowLeft, Download, Upload, Trash2, Calendar, DollarSign, Edit2,
 import { auth, db } from './firebase';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, getDoc, getDocs, deleteDoc } from 'firebase/firestore';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, Legend} from 'recharts';
 
 const ExpenseDashboard = () => {
   // Auth state
@@ -25,6 +26,13 @@ const ExpenseDashboard = () => {
   const [editingId, setEditingId] = useState(null);
   const [editData, setEditData] = useState({ date: '', description: '', category: '', amount: '' });
   const categories = ['Ngopi', 'Makan', 'Nongkrong', 'Tak Terduga'];
+  const categoryColors = {
+  Makan: '#3B82F6',
+  Ngopi: '#8B5CF6',
+  Nongkrong: '#F59E0B',
+  'Tak Terduga': '#EF4444'
+  };
+  const [chartFilter, setChartFilter] = useState('1month');
 
   // Check auth state
   useEffect(() => {
@@ -381,6 +389,149 @@ const ExpenseDashboard = () => {
     }).format(amount);
   };
 
+  const getChartData = () => {
+    const now = new Date();
+
+    // =========================
+    // 1 WEEK
+    // =========================
+    if (chartFilter === '1week') {
+
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
+      const monthKey = generateMonthKey(currentMonth, currentYear);
+      const monthData = expenses[monthKey];
+
+      if (!monthData) return [];
+
+      const weeks = {
+        'Week 1': {},
+        'Week 2': {},
+        'Week 3': {},
+        'Week 4': {},
+        'Week 5': {}
+      };
+
+      categories.forEach(cat => {
+        Object.keys(weeks).forEach(week => {
+          weeks[week][cat] = 0;
+        });
+      });
+
+      monthData.items.forEach(item => {
+
+        const day = new Date(item.date).getDate();
+
+        let weekLabel = 'Week 1';
+
+        if (day > 7 && day <= 14) weekLabel = 'Week 2';
+        else if (day > 14 && day <= 21) weekLabel = 'Week 3';
+        else if (day > 21 && day <= 28) weekLabel = 'Week 4';
+        else if (day > 28) weekLabel = 'Week 5';
+
+        weeks[weekLabel][item.category] += item.amount;
+      });
+
+      return Object.keys(weeks).map(week => ({
+        name: week,
+        ...weeks[week]
+      }));
+    }
+
+    // =========================
+    // 1 MONTH
+    // =========================
+    if (chartFilter === '1month') {
+
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
+      const monthKey = generateMonthKey(currentMonth, currentYear);
+      const monthData = expenses[monthKey];
+
+      if (!monthData) return [];
+
+      const groupedByDay = {};
+
+      monthData.items.forEach(item => {
+
+        const dateObj = new Date(item.date);
+
+        const day = dateObj.getDate();
+
+        if (!groupedByDay[day]) {
+
+          groupedByDay[day] = {
+            name: `${day}`,
+            fullDate: dateObj.toLocaleDateString('id-ID', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            }),
+            Makan: 0,
+            Ngopi: 0,
+            Nongkrong: 0,
+            'Tak Terduga': 0
+          };
+        }
+
+        groupedByDay[day][item.category] += item.amount;
+      });
+
+      return Object.values(groupedByDay).sort(
+        (a, b) => parseInt(a.name) - parseInt(b.name)
+      );
+    }
+
+    // =========================
+    // 1 YEAR
+    // =========================
+
+    const grouped = {};
+
+    Object.keys(expenses).forEach((key) => {
+
+      const monthData = expenses[key];
+
+      const categoryTotals = {
+        Makan: 0,
+        Ngopi: 0,
+        Nongkrong: 0,
+        'Tak Terduga': 0
+      };
+
+      monthData.items.forEach(item => {
+        categoryTotals[item.category] += item.amount;
+      });
+
+      const total =
+        categoryTotals.Makan +
+        categoryTotals.Ngopi +
+        categoryTotals.Nongkrong +
+        categoryTotals['Tak Terduga'];
+
+      grouped[key] = {
+        name: getMonthName(monthData.month).slice(0, 3),
+        fullLabel: `${getMonthName(monthData.month)} ${monthData.year}`,
+        total,
+        ...categoryTotals,
+        rawMonth: monthData.month,
+        rawYear: monthData.year
+      };
+    });
+
+    return Object.values(grouped)
+      .sort((a, b) => {
+        if (a.rawYear !== b.rawYear) {
+          return a.rawYear - b.rawYear;
+        }
+
+        return a.rawMonth - b.rawMonth;
+      })
+      .slice(-12);
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -495,6 +646,276 @@ const ExpenseDashboard = () => {
                 <Plus size={20} />
                 Bulan Baru
               </button>
+            </div>
+          </div>
+
+          {/* Statistic Chart */}
+          <div className="bg-slate-800 border border-slate-700 rounded-3xl p-6 mb-8 shadow-xl">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-white">
+                  Statistik Pengeluaran
+                </h2>
+
+                <p className="text-slate-400 text-sm mt-1">
+                  Track pengeluaran berdasarkan periode waktu
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {[
+                  { key: '1month', label: '1 Month' },
+                  { key: '1week', label: '1 Week' },
+                  { key: '1year', label: '1 Year' }
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    onClick={() => setChartFilter(item.key)}
+                    className={`px-4 py-2 rounded-xl text-sm transition-all border ${
+                      chartFilter === item.key
+                        ? 'bg-blue-600 text-white border-blue-500'
+                        : 'bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+
+                {chartFilter === '1year' ? (
+
+                  <AreaChart data={getChartData()}>
+                    <defs>
+                      <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+
+                    <XAxis
+                      dataKey="name"
+                      stroke="#94A3B8"
+                      interval={0}
+                      tickMargin={10}
+                      padding={{ left: 20, right: 20 }}
+                      tick={{ fontSize: 11 }}
+                    />
+
+                    <YAxis
+                      stroke="#94A3B8"
+                      tickFormatter={(value) =>
+                        `Rp${(value / 1000).toFixed(0)}k`
+                      }
+                    />
+
+                    <Tooltip
+                      cursor={{
+                        stroke: '#3B82F6',
+                        strokeWidth: 1,
+                        strokeDasharray: '5 5'
+                      }}
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+
+                          const total = payload.reduce(
+                            (sum, item) => sum + item.value,
+                            0
+                          );
+
+                          return (
+                            <div className="bg-slate-900/95 border border-slate-700 rounded-2xl p-4 shadow-2xl min-w-[220px]">
+
+                              {/* Month */}
+                              <div className="text-white text-xl font-bold mb-4">
+                                {payload?.[0]?.payload?.fullLabel || label}
+                              </div>
+
+                              {/* Category Breakdown */}
+                              <div className="space-y-2">
+                                {payload.map((item) => (
+                                  <div
+                                    key={item.dataKey}
+                                    className="flex items-center justify-between gap-6"
+                                  >
+                                    <div className="flex items-center gap-2">
+
+                                      <div
+                                        className="w-3 h-3 rounded-full"
+                                        style={{
+                                          backgroundColor: item.color
+                                        }}
+                                      />
+
+                                      <span
+                                        className="text-sm"
+                                        style={{
+                                          color: item.color
+                                        }}
+                                      >
+                                        {item.name}
+                                      </span>
+                                    </div>
+
+                                    <span className="text-sm text-white font-medium">
+                                      {formatCurrency(item.value)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Divider */}
+                              <div className="border-t border-slate-700 my-3" />
+
+                              {/* Total */}
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-slate-300 font-medium">
+                                  Total
+                                </span>
+
+                                <span className="text-sm text-white font-bold">
+                                  {formatCurrency(total)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return null;
+                      }}
+                    />
+                    <Legend />
+
+                    {categories.map(category => (
+                      <Area
+                        key={category}
+                        type="monotone"
+                        dataKey={category}
+                        stackId="1"
+                        stroke={categoryColors[category]}
+                        fill={categoryColors[category]}
+                        fillOpacity={0.25}
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </AreaChart>
+
+                ) : (
+
+                  <BarChart
+                    data={getChartData()}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 10,
+                      bottom: 10
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+
+                    <XAxis
+                      dataKey="name"
+                      stroke="#94A3B8"
+                    />
+
+                    <YAxis
+                      stroke="#94A3B8"
+                      tickFormatter={(value) =>
+                        `Rp${(value / 1000).toFixed(0)}k`
+                      }
+                    />
+
+                    <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+
+                        const total = payload.reduce(
+                          (sum, item) => sum + item.value,
+                          0
+                        );
+
+                        return (
+                          <div className="bg-slate-900/95 border border-slate-700 rounded-2xl p-4 shadow-2xl min-w-[220px]">
+
+                            {/* Title */}
+                            <div className="text-white text-xl font-bold mb-4">
+                              {payload?.[0]?.payload?.fullDate || label}
+                            </div>
+
+                            {/* Category List */}
+                            <div className="space-y-2">
+                              {payload.map((item) => (
+                                <div
+                                  key={item.dataKey}
+                                  className="flex items-center justify-between gap-6"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="w-3 h-3 rounded-full"
+                                      style={{
+                                        backgroundColor: item.color
+                                      }}
+                                    />
+
+                                    <span
+                                      className="text-sm"
+                                      style={{
+                                        color: item.color
+                                      }}
+                                    >
+                                      {item.name}
+                                    </span>
+                                  </div>
+
+                                  <span className="text-sm text-white font-medium">
+                                    {formatCurrency(item.value)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Divider */}
+                            <div className="border-t border-slate-700 my-3" />
+
+                            {/* Total */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-slate-300 font-medium">
+                                Total
+                              </span>
+
+                              <span className="text-sm text-white font-bold">
+                                {formatCurrency(total)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      return null;
+                    }}
+                  />
+
+                    <Legend />
+
+                    {categories.map(category => (
+                      <Bar
+                        key={category}
+                        dataKey={category}
+                        stackId="a"
+                        fill={categoryColors[category]}
+                        radius={[4, 4, 0, 0]}
+                      />
+                    ))}
+                  </BarChart>
+
+                )}
+
+              </ResponsiveContainer>
             </div>
           </div>
 

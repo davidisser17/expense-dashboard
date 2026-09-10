@@ -369,7 +369,12 @@ export const scanGmailForExpenses = async (
     throw err;
   }
   if (listRes.status === 403) {
-    throw new Error('Akses Gmail ditolak (403). Pastikan Gmail API aktif & akun Anda terdaftar sebagai Test User di OAuth consent screen.');
+    const err = new Error('Akses Gmail ditolak (403). Pastikan Gmail API aktif & akun Anda terdaftar sebagai Test User di OAuth consent screen.');
+    // Token yang tersimpan mungkin diterbitkan SEBELUM konfigurasi Google
+    // diperbaiki (mode testing / test user / scope) — tandai agar cache
+    // token dibuang dan percobaan berikutnya meminta token yang baru.
+    err.tokenInvalid = true;
+    throw err;
   }
   if (!listRes.ok) {
     throw new Error(`Gagal mengambil daftar email Gmail (kode ${listRes.status}).`);

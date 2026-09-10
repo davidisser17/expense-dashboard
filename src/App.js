@@ -343,6 +343,11 @@ const ExpenseDashboard = () => {
       setGmailCandidates(results.map((r) => ({ ...r, selected: true })));
       setGmailStatus('preview');
     } catch (err) {
+      // 403 (tokenInvalid): token lama kemungkinan diterbitkan sebelum
+      // konfigurasi Google diperbaiki (mode testing / test user / scope)
+      // → buang cache agar percobaan berikutnya meminta izin/token baru,
+      // bukan terus memakai token yang sudah ditolak Google.
+      if (err.tokenInvalid) clearCachedGmailToken();
       setGmailError(err.message || 'Terjadi error saat sinkronisasi Gmail.');
       setGmailStatus('settings');
     }

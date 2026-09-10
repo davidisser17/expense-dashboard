@@ -27,7 +27,7 @@ Pastikan Client ID tersebut sudah dikonfigurasi di Google Cloud Console:
    - Menu **APIs & Services → Credentials**
    - **Authorized JavaScript origins** — pastikan berisi semua origin tempat aplikasi dijalankan:
      - `http://localhost:3000` (development)
-     - `https://davidisser.github.io` (GitHub Pages)
+     - `https://davidisser17.github.io` (GitHub Pages)
 
 > Jika ingin memakai Client ID lain, cukup ubah nilai `GMAIL_CLIENT_ID_DEFAULT` di `src/App.js`.
 
@@ -68,7 +68,7 @@ Pastikan Client ID tersebut sudah dikonfigurasi di Google Cloud Console:
 |---|---|
 | `Akses Gmail ditolak (403)` | Pastikan Gmail API aktif & email Anda terdaftar sebagai **Test user** di OAuth consent screen |
 | `invalid_scope` / scope error di popup | Tambahkan scope `gmail.modify` di **Data Access** OAuth consent screen, lalu coba lagi |
-| `origin_mismatch` / popup error | Tambahkan origin aplikasi (`http://localhost:3000` / `https://davidisser.github.io`) di **Authorized JavaScript origins** |
+| `origin_mismatch` / popup error | Tambahkan origin aplikasi (`http://localhost:3000` / `https://davidisser17.github.io`) di **Authorized JavaScript origins** — harus persis sama dengan URL di address bar (scheme + host + port, tanpa path, tanpa garis miring akhir) |
 | `access_denied` di popup Google | Klik **Lanjutkan** saat peringatan "app not verified" (wajar untuk app mode Testing) |
 | Tidak ada transaksi terdeteksi | Cek apakah email struk pada periode itu mengandung nominal "Rp ..." — nominal tanpa "Rp"/"IDR" tidak terdeteksi |
 | Data yang lama muncul lagi | Data hanya dianggap "sudah disinkronkan" jika disimpan lewat fitur Sinkron Gmail; input manual tidak terdeteksi |
